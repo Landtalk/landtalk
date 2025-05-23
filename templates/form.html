@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>계획서 자동화 입력</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .input-group {
+            margin-bottom: 10px;
+        }
+        .other-input {
+            display: none;
+            margin-left: 10px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-top: 2rem;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid mt-5">
+  <div class="row">
+    <div class="col-lg-9">
+      <h1 class="mb-4">계획서 자동화 입력</h1>
+      <form action="/generate" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="form_type" value="{{ form_type }}">
+        <input type="hidden" id="my_address" value="{{ my_address }}">
+        <input type="hidden" id="my_name" value="{{ my_name }}">
+
+        <!-- ① 취득대상 농지에 관한 사항 -->
+        <div class="section-title">① 취득대상 농지에 관한 사항</div>
+        <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>시·군</th>
+              <th>구·읍·면</th>
+              <th>리·동</th>
+              <th>지번</th>
+              <th>지목</th>
+              <th>면적(㎡)</th>
+              <th>공유지분의 비율</th>
+              <th>영농거리(km)</th>
+              <th>농지의 현재상태</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for i in range(1,4) %}
+            <tr>
+              <td><input class="form-control" name="target_region{{i}}" placeholder="시·군"></td>
+              <td><input class="form-control" name="target_town{{i}}" placeholder="구·읍·면"></td>
+              <td><input class="form-control" name="target_village{{i}}" placeholder="리·동"></td>
+              <td><input class="form-control" name="target_lot{{i}}" placeholder="지번"></td>
+              <td>
+                <div class="input-group">
+                  <select name="target_category{{i}}" class="form-select" onchange="toggleOtherInput(this, 'target_category{{i}}_other')">
+                    <option value="">해당없음</option>
+                    <option value="전">전</option>
+                    <option value="답">답</option>
+                    <option value="과수원">과수원</option>
+                    <option value="기타">기타</option>
+                  </select>
+                  <input type="text" name="target_category{{i}}_other" class="form-control other-input" placeholder="직접입력">
+                </div>
+              </td>
+              <td><input class="form-control" name="target_area{{i}}" placeholder="면적(㎡)"></td>
+              <td>
+                <div class="input-group">
+                  <input type="text" class="form-control" name="target_share_area{{i}}" placeholder="면적(㎡)">
+                  <span class="input-group-text">중</span>
+                  <input type="text" class="form-control" name="target_share_denominator{{i}}" placeholder="분모">
+                  <span class="input-group-text">분의</span>
+                  <input type="text" class="form-control" name="target_share_numerator{{i}}" placeholder="분자">
+                </div>
+              </td>
+              <td class="d-flex align-items-center">
+                <input class="form-control me-1" name="target_distance{{i}}" id="target_distance{{i}}" placeholder="영농거리(km)" readonly>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-index="{{i}}" onclick="calculate_distance(this)">거리계산</button>
+              </td>
+              <td><input class="form-control" name="target_status{{i}}" placeholder="농지의 현재상태"></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <div class="mb-3"><input class="form-control" name="target_area_total" placeholder="면적 합계(㎡)" readonly></div>
+
+        <!-- ② 취득자(취득 농업법인) 및 세대원(구성원)의 농업경영능력 -->
+        <div class="section-title">② 취득자(취득 농업법인) 및 세대원(구성원)의 농업경영능력</div>
+        <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>취득자와의 관계</th>
+              <th>연령</th>
+              <th>직업</th>
+              <th>영농경력(년)</th>
+              <th>향후 농업경영 여부</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in range(1,4) %}
+            <tr>
+              <td>
+                <div class="input-group">
+                  <select name="member_relation{{i}}" class="form-select" onchange="toggleOtherInput(this, 'member_relation{{i}}_other')">
+                    <option value="">해당없음</option>
+                    <option value="본인">본인</option>
+                    <option value="배우자">배우자</option>
+                    <option value="부">부</option>
+                    <option value="모">모</option>
+                    <option value="조부">조부</option>
+                    <option value="조모">조모</option>
+                    <option value="자녀">자녀</option>
+                    <option value="형제">형제</option>
+                    <option value="기타">기타</option>
+                  </select>
+                  <input type="text" name="member_relation{{i}}_other" class="form-control other-input" placeholder="직접입력">
+                </div>
+              </td>
+              <td><input type="number" name="member_age{{i}}" class="form-control" placeholder="연령"></td>
+              <td><input type="text" name="member_job{{i}}" class="form-control" placeholder="직업"></td>
+              <td><input type="number" name="member_exp{{i}}" class="form-control" placeholder="영농경력(년)"></td>
+              <td>
+                <select name="member_plan{{i}}" class="form-select">
+                  <option value="">해당없음</option>
+                  <option value="여">여</option>
+                  <option value="부">부</option>
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+
+        <!-- ③ 취득농지의 농업경영에 필요한 노동력 확보방안 -->
+        <div class="section-title">③ 취득농지의 농업경영에 필요한 노동력 확보방안</div>
+        <div class="row mb-2">
+          <div class="col"><input class="form-control" name="labor_self" placeholder="자기노동력"></div>
+          <div class="col"><input class="form-control" name="labor_partial" placeholder="일부위탁"></div>
+          <div class="col"><input class="form-control" name="labor_full" placeholder="전부위탁(임대)"></div>
+        </div>
+
+        <!-- ④ 농업기계·장비·시설 보유현황 -->
+        <div class="section-title">④ 농업기계·장비·시설 보유현황</div>
+        <div class="row mb-2">
+          <div class="col"><input class="form-control" name="owned_machine_name" placeholder="기계·장비·시설명"></div>
+          <div class="col"><input class="form-control" name="owned_machine_count" placeholder="보유현황"></div>
+          <div class="col"><input class="form-control" name="owned_facility_area" placeholder="시설면적(㎡)"></div>
+        </div>
+
+        <!-- ⑤ 농업기계·장비·시설 보유계획 -->
+        <div class="section-title">⑤ 농업기계·장비·시설 보유계획</div>
+        <div class="row mb-2">
+          <div class="col"><input class="form-control" name="plan_machine_name" placeholder="기계·장비·시설명"></div>
+          <div class="col"><input class="form-control" name="plan_machine_count" placeholder="보유계획"></div>
+          <div class="col"><input class="form-control" name="plan_facility_area" placeholder="시설면적(㎡)"></div>
+        </div>
+
+        <!-- ⑥ 소유농지 이용실태 -->
+        <div class="section-title">⑥ 소유농지 이용실태</div>
+        <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>시·군</th>
+              <th>구·읍·면</th>
+              <th>리·동</th>
+              <th>지번</th>
+              <th>지목</th>
+              <th>면적(㎡)</th>
+              <th>주재배작물(측종명)</th>
+              <th>자기의 농업경영 여부</th>
+              <th>취득대상 농지와의 거리(km)</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for i in range(1,4) %}
+            <tr>
+              <td><input class="form-control" name="own_region{{i}}" placeholder="시·군"></td>
+              <td><input class="form-control" name="own_town{{i}}" placeholder="구·읍·면"></td>
+              <td><input class="form-control" name="own_village{{i}}" placeholder="리·동"></td>
+              <td><input class="form-control" name="own_lot{{i}}" placeholder="지번"></td>
+              <td>
+                <div class="input-group">
+                  <select name="own_category{{i}}" class="form-select" onchange="toggleOtherInput(this, 'own_category{{i}}_other')">
+                    <option value="">해당없음</option>
+                    <option value="전">전</option>
+                    <option value="답">답</option>
+                    <option value="과수원">과수원</option>
+                    <option value="기타">기타</option>
+                  </select>
+                  <input type="text" name="own_category{{i}}_other" class="form-control other-input" placeholder="직접입력">
+                </div>
+              </td>
+              <td><input class="form-control" name="own_area{{i}}" placeholder="면적(㎡)"></td>
+              <td><input class="form-control" name="own_crop{{i}}" placeholder="주재배작물(측종명)"></td>
+              <td>
+                <select name="own_self{{i}}" class="form-select">
+                  <option value="">해당없음</option>
+                  <option value="여">여</option>
+                  <option value="부">부</option>
+                </select>
+              </td>
+              <td class="d-flex align-items-center">
+                <input class="form-control me-1" name="own_distance{{i}}" id="own_distance{{i}}" placeholder="취득대상 농지와의 거리(km)" readonly>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-type="own" data-index="{{i}}" onclick="calculate_distance(this)">거리계산</button>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        <div class="mb-3"><input class="form-control" name="own_area_total" placeholder="면적 합계(㎡)" readonly></div>
+
+        <!-- ⑦ 연고자에 관한 사항 -->
+        <div class="section-title">⑦ 연고자에 관한 사항</div>
+        <div class="row mb-2">
+          <div class="col"><input class="form-control" name="acquaintance_name" placeholder="연고자 성명"></div>
+          <div class="col"><input class="form-control" name="acquaintance_relation" placeholder="관계"></div>
+        </div>
+
+        <!-- ⑧ 농지취득자금 조달계획 -->
+        <div class="section-title">⑧ 농지취득자금 조달계획</div>
+        <div class="row mb-2">
+          <div class="col"><input class="form-control" name="fund_own" placeholder="자기자금"></div>
+          <div class="col"><input class="form-control" name="fund_borrow" placeholder="차입금 등"></div>
+          <div class="col"><input class="form-control" name="fund_total" placeholder="합계"></div>
+        </div>
+
+        <!-- ⑨ 영농계획에 관한 사항 -->
+        <div class="section-title">⑨ 영농계획에 관한 사항</div>
+        <div class="mb-3">
+          <label for="apply_date" class="form-label">신청일</label>
+          <input type="date" class="form-control" id="apply_date" name="apply_date">
+        </div>
+
+        <!-- 영농계획 기본 정보 테이블 분리 -->
+        <div class="table-responsive mb-3">
+          <table class="table table-bordered align-middle">
+            <thead>
+              <tr>
+                <th style="width: 15%">주재배작물<br>(축종명)</th>
+                <td style="width: 15%"><input class="form-control" name="crop_name" placeholder="예: 블루베리" readonly></td> {# 자동 채움되므로 읽기 전용 #}
+                <th style="width: 15%">영농착수 시기</th>
+                <td style="width: 15%"><input type="date" class="form-control" name="planting_date" placeholder="예: 2025-03-01" readonly></td> {# 자동 채움되므로 읽기 전용 #}
+                <th style="width: 15%">수확 예정 시기</th>
+                <td style="width: 15%"><input type="date" class="form-control" name="harvest_date" placeholder="예: 2025-10-01" readonly></td> {# 자동 채움되므로 읽기 전용 #}
+              </tr>
+            </thead>
+          </table>
+        </div>
+
+        <!-- 영농계획 상세 일정 테이블 분리 -->
+        <div class="table-responsive mb-3">
+          <table class="table table-bordered align-middle">
+            <thead>
+              <tr>
+                <th colspan="2" style="width: 25%">작업일정</th> {# 너비 조정 #}
+                <th style="width: 20%">작업 내용</th> {# 너비 조정 #}
+                <th style="width: 10%">참여 인원(명)</th>
+                <th style="width: 15%">소요자금(천원)</th>
+                <th style="width: 15%">자금조달방안</th>
+              </tr>
+              <tr>
+                <th colspan="2">합 계</th>
+                <td></td>
+                <td></td>
+                <td><input class="form-control" name="plan_cost_total" id="plan_cost_total" readonly placeholder="자동 계산"></td>
+                <td></td>
+              </tr>
+            </thead>
+            <tbody>
+              {% for i in range(1, 6) %} {# 5개 과정 #}
+              <tr>
+                <td colspan="2"> {# 작업일정 두 칸 합침 #}
+                  <div class="input-group">
+                    <input type="text" class="form-control" name="plan_period{{i}}1" placeholder="부터" readonly>
+                    <span class="input-group-text">~</span>
+                    <input type="text" class="form-control" name="plan_period{{i}}2" placeholder="까지" readonly>
+                  </div>
+                </td>
+                <td><input class="form-control" name="plan_content{{i}}" placeholder="예: 토지 정리" readonly></td> {# 자동 채움되므로 읽기 전용 #}
+                <td><input type="number" class="form-control" name="plan_people{{i}}" placeholder="명" readonly></td> {# 자동 채움되므로 읽기 전용 #}
+                <td><input type="number" class="form-control plan-cost" name="plan_cost{{i}}" placeholder="천원" readonly></td> {# 자동 채움되므로 읽기 전용 #}
+                <td><input class="form-control" name="plan_fund{{i}}" placeholder="예: 자기 자금" readonly></td> {# 자동 채움되므로 읽기 전용 #}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ⑩ 임차(예정) 농지 현황 -->
+        <div class="section-title">⑩ 임차(예정) 농지 현황</div>
+        <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>시·도</th>
+              <th>시·군</th>
+              <th>읍·면</th>
+              <th>리·동</th>
+              <th>지번</th>
+              <th>지목</th>
+              <th>면적(㎡)</th>
+              <th>주재배작물(측종명)</th>
+              <th>임차(예정)여부</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for i in range(1,4) %}
+            <tr>
+              <td><input class="form-control" name="lease_region{{i}}" placeholder="시·도"></td>
+              <td><input class="form-control" name="lease_city{{i}}" placeholder="시·군"></td>
+              <td><input class="form-control" name="lease_town{{i}}" placeholder="읍·면"></td>
+              <td><input class="form-control" name="lease_village{{i}}" placeholder="리·동"></td>
+              <td><input class="form-control" name="lease_lot{{i}}" placeholder="지번"></td>
+              <td><input class="form-control" name="lease_category{{i}}" placeholder="지목"></td>
+              <td><input class="form-control" name="lease_area{{i}}" placeholder="면적(㎡)"></td>
+              <td><input class="form-control" name="lease_crop{{i}}" placeholder="주재배작물(측종명)"></td>
+              <td><input class="form-control" name="lease_status{{i}}" placeholder="임차(예정)여부"></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+
+        <!-- ⑪ 공유로 취득시 위치 -->
+        <div class="section-title">⑪ 공유로 취득시 위치</div>
+        <div class="mb-3">
+          <input type="file" name="shared_location" accept="image/*" class="form-control">
+          <small class="text-muted">이미지 파일을 업로드하세요. 이미지는 150mm x 60mm 크기로 자동 조정됩니다.</small>
+        </div>
+
+        <!-- 제출인 및 출력형식 -->
+        <div class="row mb-3">
+          <div class="col">
+            <label>제출인</label>
+            <input class="form-control" name="myself_name" placeholder="제출인 성명" value="{{ my_name }}">
+          </div>
+          <div class="col">
+            <label>출력형식</label>
+            <select class="form-control" name="output_type">
+              <option value="docx">docx</option>
+              <option value="pdf">pdf</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label>서명 방식 선택</label>
+          <select class="form-select" id="sign_mode_select" name="sign_mode" onchange="toggleSignInput(this.value)">
+            <option value="upload" selected>파일 업로드</option>
+            <option value="draw">직접 그리기</option>
+          </select>
+        </div>
+        <div class="alert alert-info p-2 mb-2" style="font-size:0.95em;">
+          <b>서명 파일 업로드 안내:</b> 배경이 최대한 흰색(종이 등)에 검은색/진한색 펜으로 서명하여 촬영 또는 스캔한 이미지를 첨부해 주세요.<br>
+          배경이 어두우면 자동 인식이 잘 되지 않을 수 있습니다.
+        </div>
+        <div id="sign_upload_box">
+          <input type="file" name="signature" accept="image/*">
+        </div>
+        <div id="sign_draw_box" style="display:none;">
+          <canvas id="sign_canvas" width="300" height="100" style="border:1px solid #ccc;"></canvas>
+          <button type="button" onclick="clearCanvas()">지우기</button>
+          <input type="hidden" name="signature_draw" id="signature_draw">
+        </div>
+        <button type="submit" class="btn btn-primary">계획서 생성</button>
+      </form>
+    </div>
+    <div class="col-lg-3">
+      <!-- Sample image display section - REMOVE -->
+      
+    </div>
+  </div>
+</div>
+<script>
+// 드롭다운에서 기타 선택 시 입력창 노출
+function toggleOtherInput(select, inputName) {
+  const input = document.getElementsByName(inputName)[0];
+  if (select.value === '기타') {
+    input.style.display = 'block';
+  } else {
+    input.style.display = 'none';
+    input.value = '';
+  }
+}
+// 거리계산 기능 (취득대상 농지/소유농지)
+function calculate_distance(buttonElement) {
+  const type = buttonElement.dataset.type || 'target'; // Default to 'target' if no data-type
+  const idx = buttonElement.dataset.index;
+  let prefix;
+  if (type === 'own') {
+    prefix = 'own_';
+  } else {
+    prefix = 'target_';
+  }
+  
+  // 취득대상 농지 주소 가져오기
+  const targetRegion = document.querySelector('input[name="target_region1"]').value;
+  const targetTown = document.querySelector('input[name="target_town1"]').value;
+  const targetVillage = document.querySelector('input[name="target_village1"]').value;
+  const targetLot = document.querySelector('input[name="target_lot1"]').value;
+  const targetAddress = `${targetRegion} ${targetTown} ${targetVillage} ${targetLot}`;
+  
+  if (type === 'target') {
+    // 취득대상 농지의 영농거리 계산 (주소지 ~ 취득대상농지)
+    const myAddress = document.getElementById('my_address').value;
+    if (!myAddress || !targetAddress.trim()) {
+      return;
+    }
+    fetch('/calculate_distance', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({addr1: myAddress, addr2: targetAddress})
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.distance) {
+        document.getElementById(`target_distance${idx}`).value = data.distance;
+      } else {
+        document.getElementById(`target_distance${idx}`).value = data.error || '거리 계산 실패';
+      }
+    });
+  } else {
+    // 소유농지의 거리 계산 (취득대상농지 ~ 소유농지)
+    const ownRegion = document.querySelector(`input[name='${prefix}region${idx}']`).value;
+    const ownTown = document.querySelector(`input[name='${prefix}town${idx}']`).value;
+    const ownVillage = document.querySelector(`input[name='${prefix}village${idx}']`).value;
+    const ownLot = document.querySelector(`input[name='${prefix}lot${idx}']`).value;
+    const ownAddress = `${ownRegion} ${ownTown} ${ownVillage} ${ownLot}`;
+    
+    if (!targetAddress.trim() || !ownAddress.trim()) {
+      return;
+    }
+    
+    fetch('/calculate_distance', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({addr1: targetAddress, addr2: ownAddress})
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.distance) {
+        document.getElementById(`own_distance${idx}`).value = data.distance;
+      } else {
+        document.getElementById(`own_distance${idx}`).value = data.error || '거리 계산 실패';
+      }
+    });
+  }
+}
+function toggleSignInput(mode) {
+  document.getElementById('sign_upload_box').style.display = (mode === 'upload') ? 'block' : 'none';
+  document.getElementById('sign_draw_box').style.display = (mode === 'draw') ? 'block' : 'none';
+}
+// 캔버스 서명 저장
+const canvas = document.getElementById('sign_canvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+  canvas.addEventListener('mousedown', e => { drawing = true; ctx.beginPath(); });
+  canvas.addEventListener('mouseup', e => { drawing = false; });
+  canvas.addEventListener('mouseout', e => { drawing = false; });
+  canvas.addEventListener('mousemove', e => {
+    if (!drawing) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.stroke();
+  });
+  window.clearCanvas = function() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+  // 폼 제출 시 base64로 저장
+  document.querySelector('form').addEventListener('submit', function(e) {
+    if (document.getElementById('sign_mode_select').value === 'draw') {
+      document.getElementById('signature_draw').value = canvas.toDataURL('image/png');
+    }
+  });
+}
+function updateTargetAreaTotal() {
+  let sum = 0;
+  for (let i = 1; i <= 3; i++) {
+    const val = parseFloat(document.querySelector(`input[name="target_area${i}"]`).value) || 0;
+    sum += val;
+  }
+  document.querySelector('input[name="target_area_total"]').value = sum ? sum.toFixed(2) : '';
+}
+for (let i = 1; i <= 3; i++) {
+  document.querySelector(`input[name="target_area${i}"]`).addEventListener('input', updateTargetAreaTotal);
+}
+function updateOwnAreaTotal() {
+  let sum = 0;
+  for (let i = 1; i <= 3; i++) {
+    const val = parseFloat(document.querySelector(`input[name="own_area${i}"]`).value) || 0;
+    sum += val;
+  }
+  document.querySelector('input[name="own_area_total"]').value = sum ? sum.toFixed(2) : '';
+}
+for (let i = 1; i <= 3; i++) {
+  document.querySelector(`input[name="own_area${i}"]`).addEventListener('input', updateOwnAreaTotal);
+}
+// 소유농지 주소 입력 시 자동 거리계산
+for (let i = 1; i <= 3; i++) {
+  ['region','town','village','lot'].forEach(function(field) {
+    document.querySelector(`input[name='own_${field}${i}']`).addEventListener('change', function() {
+      calculate_distance('own', i);
+    });
+  });
+}
+
+// --- 영농계획 자동화 --- //
+
+function getQuarterCrop(month) {
+  // 단순화: 항상 "블루베리" 반환
+  return '블루베리';
+}
+
+// 영농계획 표 자동 채우기
+function fillPlanTable() {
+  const applyDateInput = document.getElementById('apply_date');
+  const applyDateValue = applyDateInput.value;
+  const totalAreaInput = document.querySelector('input[name="target_area_total"]');
+  const totalAreaValue = parseFloat(totalAreaInput.value) || 0; // 총 면적 가져오기, 없으면 0
+  const formType = document.querySelector('input[name="form_type"]').value; // 폼 타입 가져오기
+
+  // 주작물 설정
+  if (formType === 'weekend') {
+      document.querySelector('input[name="crop_name"]').value = '고구마'; // 주말체험: 고구마
+  } else {
+      document.querySelector('input[name="crop_name"]').value = '블루베리'; // 농업경영: 블루베리
+  }
+
+  // 신청일이 비어있으면 초기화
+  if (!applyDateValue) {
+      document.querySelector('input[name="planting_date"]').value = '';
+      document.querySelector('input[name="harvest_date"]').value = '';
+
+      // 상세 계획 초기화 (두 양식 공통)
+      for (let i = 1; i <= 5; i++) { // 5개 과정
+          document.querySelector(`input[name="plan_period${i}1"]`).value = '';
+          document.querySelector(`input[name="plan_period${i}2"]`).value = '';
+          document.querySelector(`input[name="plan_content${i}"]`).value = '';
+          document.querySelector(`input[name="plan_people${i}"]`).value = '';
+          document.querySelector(`input[name="plan_cost${i}"]`).value = '';
+          document.querySelector(`input[name="plan_fund${i}"]`).value = '';
+      }
+      updatePlanCostTotal();
+      return;
+  }
+
+  try {
+    const applyDate = new Date(applyDateValue);
+    const applyYear = applyDate.getFullYear();
+    let plantingDate, harvestDate;
+
+    if (formType === 'weekend') {
+        // 주말체험 영농계획 로직
+
+        // 영농착수 시기 (신청일로부터 3개월 후)
+        plantingDate = new Date(applyDate);
+        plantingDate.setMonth(applyDate.getMonth() + 3);
+         if (plantingDate.getDate() < applyDate.getDate()) {
+                plantingDate.setDate(0);
+            }
+        document.querySelector('input[name="planting_date"]').value = plantingDate.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
+        // 수확 예정 시기 (착수시기 4개월 후, 10월 고정 로직 반영)
+        harvestDate = new Date(plantingDate);
+        harvestDate.setMonth(plantingDate.getMonth() + 4); // 착수 시기 + 4개월
+
+        const calculatedHarvestMonth = harvestDate.getMonth(); // 계산된 수확 월 (0-11)
+        const calculatedHarvestYear = harvestDate.getFullYear();
+
+        const october = 9; // 10월은 9 (0부터 시작)
+
+        // 계산된 수확 월이 10월을 지났거나 (11월, 12월, 다음해 1월...) 계산된 연도가 착수 연도보다 크면 다음 해 10월로
+        // 예: 8월 착수 (+4개월) -> 12월 계산. 12월 > 10월(9) 이므로 다음 해 10월로.
+        // 예: 4월 착수 (+4개월) -> 8월 계산. 8월 <= 10월(9) 이므로 해당 해 10월로.
+        // 예: 11월 착수 (+4개월) -> 다음해 3월 계산. 다음 해이므로 다음 해 10월로.
+
+        let finalHarvestDate = new Date(harvestDate);
+
+        if (calculatedHarvestYear > plantingDate.getFullYear() || calculatedHarvestMonth > october) {
+             // 다음 해 10월 말일
+            finalHarvestDate = new Date(calculatedHarvestYear + (calculatedHarvestYear > plantingDate.getFullYear() ? 0 : 1), october + 1, 0); // 다음 해 10월 말일
+
+        } else {
+             // 해당 해 10월 말일
+             finalHarvestDate = new Date(calculatedHarvestYear, october + 1, 0); // 해당 해 10월 말일
+        }
+         harvestDate = finalHarvestDate; // 최종 결정된 날짜를 harvestDate 변수에 저장
+
+        document.querySelector('input[name="harvest_date"]').value = harvestDate.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
+        // 상세 계획 필드 초기화 (주말체험)
+         for (let i = 1; i <= 5; i++) {
+            document.querySelector(`input[name="plan_period${i}1"]`).value = '';
+            document.querySelector(`input[name="plan_period${i}2"]`).value = '';
+            document.querySelector(`input[name="plan_content${i}"]`).value = '';
+            document.querySelector(`input[name="plan_people${i}"]`).value = '';
+            document.querySelector(`input[name="plan_cost${i}"]`).value = '';
+            document.querySelector(`input[name="plan_fund${i}"]`).value = '';
+        }
+         updatePlanCostTotal(); // 합계 초기화
+
+    } else {
+        // 농업경영 계획 로직 (기존 로직 유지)
+
+        // 영농착수 시기 계산 (신청일로부터 3개월 후)
+        plantingDate = new Date(applyDate);
+        plantingDate.setMonth(applyDate.getMonth() + 3);
+         if (plantingDate.getDate() < applyDate.getDate()) {
+                plantingDate.setDate(0);
+            }
+        document.querySelector('input[name="planting_date"]').value = plantingDate.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
+        // 수확 예정 시기 계산 (신청연도 + 3년 후 7월)
+        harvestDate = new Date(applyDate);
+        harvestDate.setFullYear(applyYear + 3);
+        harvestDate.setMonth(6); // 7월 (0부터 시작하므로 6)
+        harvestDate.setDate(1); // 7월 1일로 일단 설정
+        // 해당 월의 마지막 날짜를 구해서 설정 (정확한 '일' 정보가 없으므로 월만 맞춤)
+        const lastDayOfHarvestMonth = new Date(harvestDate.getFullYear(), harvestDate.getMonth() + 1, 0).getDate();
+        harvestDate.setDate(lastDayOfHarvestMonth); // 7월 말일로 설정
+        document.querySelector('input[name="harvest_date"]').value = harvestDate.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+
+        // 총 면적(m2)을 100평(330m2) 단위로 나눈 계수 계산
+        const pyeongUnitFactor = totalAreaValue > 0 ? Math.max(1, Math.round(totalAreaValue / 330)) : 1; // 면적이 0이면 1로 간주, 반올림하여 정수 단위로
+
+        // 샘플 계획 데이터 정의 (제공된 5가지 일정 및 계산 로직 반영)
+        const samplePlan = [
+            { content: '화분개간', period_calc: 'planting_to_dec', people_factor: 1, cost_per_unit: 1000 }, // 영농착수시기부터 당해년도12월
+            { content: '묘목구매', period_calc: 'next_year_jan_to_jan', people_fixed: 1, cost_per_unit: 2000 }, // 신청연도+1년후 1월부터 1월
+            { content: '묘목심기', period_calc: 'next_year_jan_to_mar', people_factor: 2, cost_per_unit: 6000 }, // 신청연도+1년후 1월부터 3월
+            { content: '관리', period_calc: 'next_year_apr_to_harvest', people_factor: 1, cost_per_unit: 5000 }, // 신청연도+1년후 4월부터 수확예정시기
+            { content: '수확', period_calc: 'harvest_to_3months_after', people_factor: 2, cost_per_unit: 6000 } // 수확예정시기부터 3개월간
+        ];
+
+        // 기존 데이터 초기화 (5개 과정)
+        for (let i = 1; i <= 5; i++) {
+            document.querySelector(`input[name="plan_period${i}1"]`).value = '';
+            document.querySelector(`input[name="plan_period${i}2"]`).value = '';
+            document.querySelector(`input[name="plan_content${i}"]`).value = '';
+            document.querySelector(`input[name="plan_people${i}"]`).value = '';
+            document.querySelector(`input[name="plan_cost${i}"]`).value = '';
+            document.querySelector(`input[name="plan_fund${i}"]`).value = '';
+        }
+
+        // 표 채우기
+        const formatPlanMonth = (date) => {
+            return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.`; // YYYY.MM. 형식
+        };
+
+        for (let i = 0; i < samplePlan.length; i++) { // 5개 행 채우기
+            const plan = samplePlan[i];
+            const startDate = new Date(applyDate); // 계산을 위해 신청일 복사
+            const endDate = new Date(applyDate); // 계산을 위해 신청일 복사
+            let periodStart = '';
+            let periodEnd = '';
+
+            // 작업 일정 계산
+            switch (plan.period_calc) {
+                case 'planting_to_dec': // 화분개간: 영농착수시기부터 당해년도12월
+                    periodStart = formatPlanMonth(plantingDate);
+                    endDate.setFullYear(applyYear);
+                    endDate.setMonth(11); // 12월 (0부터 시작)
+                    periodEnd = formatPlanMonth(endDate);
+                    break;
+                case 'next_year_jan_to_jan': // 묘목구매: 신청연도+1년후 1월부터 1월
+                    startDate.setFullYear(applyYear + 1);
+                    startDate.setMonth(0); // 1월
+                    periodStart = formatPlanMonth(startDate);
+                    endDate.setFullYear(applyYear + 1);
+                    endDate.setMonth(0); // 1월
+                     periodEnd = formatPlanMonth(endDate);
+                    break;
+                case 'next_year_jan_to_mar': // 묘목심기: 신청연도+1년후 1월부터 3월
+                    startDate.setFullYear(applyYear + 1);
+                    startDate.setMonth(0); // 1월
+                    periodStart = formatPlanMonth(startDate);
+                    endDate.setFullYear(applyYear + 1);
+                    endDate.setMonth(2); // 3월
+                    periodEnd = formatPlanMonth(endDate);
+                    break;
+                case 'next_year_apr_to_harvest': // 관리: 신청연도+1년후 4월부터 수확예정시기
+                    startDate.setFullYear(applyYear + 1);
+                    startDate.setMonth(3); // 4월
+                    periodStart = formatPlanMonth(startDate);
+                    periodEnd = formatPlanMonth(harvestDate); // 수확예정월까지
+                    break;
+                case 'harvest_to_3months_after': // 수확: 수확예정시기부터 3개월간
+                     // 수확예정월의 1일로 시작 날짜 설정
+                    const harvestStart = new Date(harvestDate.getFullYear(), harvestDate.getMonth(), 1);
+                    periodStart = formatPlanMonth(harvestStart);
+                    // 수확예정월로부터 3개월 후 월의 마지막 날로 종료 날짜 설정
+                    const harvestEnd = new Date(harvestStart);
+                    harvestEnd.setMonth(harvestStart.getMonth() + 3);
+                    harvestEnd.setDate(0); // 해당 월의 마지막 날
+                    periodEnd = formatPlanMonth(harvestEnd);
+                    break;
+                default:
+                    break;
+            }
+
+            document.querySelector(`input[name="plan_period${i+1}1"]`).value = periodStart;
+            document.querySelector(`input[name="plan_period${i+1}2"]`).value = periodEnd;
+            document.querySelector(`input[name="plan_content${i+1}"]`).value = plan.content;
+
+            // 참여 인원 계산
+            let people = 0;
+            if (plan.people_fixed !== undefined) {
+                people = plan.people_fixed; // 고정 인원
+            } else if (plan.people_factor !== undefined) {
+                 people = Math.max(1, Math.round(pyeongUnitFactor * plan.people_factor)); // 면적 계수 * 인원 계수, 최소 1명
+            }
+            document.querySelector(`input[name="plan_people${i+1}"]`).value = people > 0 ? people : '';
+
+            // 소요 자금 계산 (100평당 금액 * 면적 계수, 십만원 단위 반올림)
+            let cost = 0;
+            if (plan.cost_per_unit !== undefined) {
+                let totalCost = plan.cost_per_unit * pyeongUnitFactor;
+                cost = Math.round(totalCost / 100) * 100; // 천원 단위로 반올림
+            }
+             document.querySelector(`input[name="plan_cost${i+1}"]`).value = cost > 0 ? cost : '';
+
+            // 자금 조달 방안 고정
+            document.querySelector(`input[name="plan_fund${i+1}"]`).value = '자기자금';
+        }
+
+        updatePlanCostTotal(); // 합계 업데이트
+    }
+
+  } catch (error) {
+      console.error("영농계획 표 채우기 오류:", error);
+       // 오류 발생 시 필드 초기화
+      document.querySelector('input[name="planting_date"]').value = '';
+      document.querySelector('input[name="harvest_date"]').value = '';
+       for (let i = 1; i <= 5; i++) { // 5개 과정
+          document.querySelector(`input[name="plan_period${i}1"]`).value = '';
+          document.querySelector(`input[name="plan_period${i}2"]`).value = '';
+          document.querySelector(`input[name="plan_content${i}"]`).value = '';
+          document.querySelector(`input[name="plan_people${i}"]`).value = '';
+          document.querySelector(`input[name="plan_cost${i}"]`).value = '';
+          document.querySelector(`input[name="plan_fund${i}"]`).value = '';
+      }
+      updatePlanCostTotal();
+  }
+}
+
+// 소요 자금 합계 계산
+function updatePlanCostTotal() {
+  let total = 0;
+  // plan-cost 클래스를 가진 모든 input 요소를 찾음
+  // 기존 4개에서 5개 과정으로 늘어났으므로 5개 합계로 변경 필요
+  // 클래스를 사용하는 것은 유지하고, 필요한 input 요소를 모두 포함하는지 확인
+  // 현재 코드는 .plan-cost 클래스 사용 -> plan_cost1부터 plan_cost5까지 모두 해당 클래스를 가지고 있는지 확인 필요
+  // HTML 구조상 가지고 있을 것으로 예상됨
+  document.querySelectorAll('.plan-cost').forEach(input => {
+    const value = parseFloat(input.value) || 0;
+    total += value;
+  });
+  // 합계 input에 값 설정
+  document.getElementById('plan_cost_total').value = total > 0 ? total.toFixed(0) : ''; // 소수점 없이 표시, 0보다 클 때만 표시
+}
+
+// DOM 로드 후 이벤트 리스너 연결 및 초기 값 설정
+document.addEventListener('DOMContentLoaded', function() {
+  const applyDateInput = document.getElementById('apply_date');
+  if (applyDateInput) {
+      // 신청일 변경 시 자동 채우기
+      applyDateInput.addEventListener('change', fillPlanTable);
+
+      // 페이지 로드 시 신청일이 이미 채워져 있다면 자동 채우기
+      // (예: 이전에 입력하고 새로고침한 경우)
+      if (applyDateInput.value) {
+          fillPlanTable();
+      }
+  }
+
+  // 총 면적 입력 필드에 이벤트 리스너 추가
+  const totalAreaInput = document.querySelector('input[name="target_area_total"]');
+   if(totalAreaInput) {
+       totalAreaInput.addEventListener('input', fillPlanTable); // 면적 변경 시에도 계획 자동 채우기
+   }
+
+  // 소요 자금 입력 변경 시 합계 자동 계산 (필요 시 수동 입력 후에도 합계 반영)
+  document.querySelectorAll('.plan-cost').forEach(input => {
+    input.addEventListener('input', updatePlanCostTotal);
+  });
+
+  // 페이지 로드 시 초기 합계 계산 (이미 값이 입력되어 있는 경우)
+  updatePlanCostTotal();
+});
+</script>
+</body>
+</html> 

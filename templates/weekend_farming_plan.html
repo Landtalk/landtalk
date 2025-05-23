@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>주말·체험영농계획서</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="p-4">
+  <h2 class="mb-4">[별지 제4호의2서식] 주말·체험영농계획서 입력</h2>
+
+  <form method="POST" action="/generate">
+    <input type="hidden" name="form_type" value="weekend" />
+
+    <!-- ① 취득 대상 농지 -->
+    <h5 class="mt-4">① 취득 대상 농지</h5>
+    <table class="table table-bordered">
+      <thead><tr>
+        <th>시군</th><th>읍면동</th><th>리동</th><th>지번</th><th>지목</th><th>면적(㎡)</th><th>공유 지분</th><th>거리(km)</th><th>현재상태</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><input name="region" class="form-control"></td>
+          <td><input name="town" class="form-control"></td>
+          <td><input name="village" class="form-control"></td>
+          <td><input name="lot" class="form-control"></td>
+          <td><input name="land_category" class="form-control"></td>
+          <td><input name="area" class="form-control"></td>
+          <td><input name="share" class="form-control"></td>
+          <td><input name="distance" class="form-control"></td>
+          <td><input name="status" class="form-control"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ② 취득자 및 세대원 능력 -->
+    <h5 class="mt-4">② 취득자 및 세대원의 주말·체험영농 능력</h5>
+    <table class="table table-bordered">
+      <thead><tr>
+        <th>관계</th><th>연령</th><th>직업</th><th>영농경력</th><th>영농참여 여부</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><input name="relation" class="form-control"></td>
+          <td><input name="age" class="form-control"></td>
+          <td><input name="job" class="form-control"></td>
+          <td><input name="experience" class="form-control"></td>
+          <td>
+            <select name="future_plan" class="form-select">
+              <option value="예">예</option>
+              <option value="아니오">아니오</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ③ 노동력 확보 방안 -->
+    <h5 class="mt-4">③ 노동력 확보 방안</h5>
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="radio" name="labor_plan" value="자기노동력" checked>
+      <label class="form-check-label">자기노동력</label>
+    </div>
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="radio" name="labor_plan" value="전부위탁">
+      <label class="form-check-label">전부위탁(임대)</label>
+    </div>
+
+    <!-- ④ 기계/장비/시설 보유 현황 -->
+    <h5 class="mt-4">④ 기계·장비·시설 보유 현황</h5>
+    <table class="table table-bordered">
+      <thead><tr><th>명칭</th><th>보유 수량</th><th>시설면적(㎡)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><input name="owned_name" class="form-control"></td>
+          <td><input name="owned_count" class="form-control"></td>
+          <td><input name="owned_area" class="form-control"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ⑤ 기계/장비/시설 보유 계획 -->
+    <h5 class="mt-4">⑤ 기계·장비·시설 보유 계획</h5>
+    <table class="table table-bordered">
+      <thead><tr><th>명칭</th><th>보유 계획 수량</th><th>시설면적(㎡)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><input name="plan_name" class="form-control"></td>
+          <td><input name="plan_count" class="form-control"></td>
+          <td><input name="plan_area" class="form-control"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ⑥ 소유 농지 이용 실태 -->
+    <h5 class="mt-4">⑥ 소유 농지 이용 실태</h5>
+    <table class="table table-bordered">
+      <thead><tr>
+        <th>시군</th><th>읍면</th><th>리동</th><th>지번</th><th>지목</th><th>면적(㎡)</th><th>주재배작물</th><th>영농여부</th><th>거리(km)</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><input name="own_region" class="form-control"></td>
+          <td><input name="own_town" class="form-control"></td>
+          <td><input name="own_village" class="form-control"></td>
+          <td><input name="own_lot" class="form-control"></td>
+          <td><input name="own_category" class="form-control"></td>
+          <td><input name="own_area" class="form-control"></td>
+          <td><input name="own_crop" class="form-control"></td>
+          <td>
+            <select name="own_self_manage" class="form-select">
+              <option value="예">예</option>
+              <option value="아니오">아니오</option>
+            </select>
+          </td>
+          <td><input name="own_distance" class="form-control"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ⑦ 농지취득 자금 조달계획 -->
+    <h5 class="mt-4">⑦ 농지취득 자금 조달계획</h5>
+    <div class="row mb-3">
+      <div class="col">
+        <label>자기자금 (원)</label>
+        <input name="fund_own" class="form-control">
+      </div>
+      <div class="col">
+        <label>차입금 (원)</label>
+        <input name="fund_borrow" class="form-control">
+      </div>
+      <div class="col">
+        <label>합계 (원)</label>
+        <input name="fund_total" class="form-control" readonly placeholder="자동계산 또는 직접입력">
+      </div>
+    </div>
+
+    <!-- ⑧ 작물 및 영농계획 -->
+    <h5 class="mt-4">⑧ 작물 및 영농계획</h5>
+    <div class="row mb-3">
+      <div class="col">
+        <label>작물명</label>
+        <input name="crop_name" class="form-control">
+      </div>
+      <div class="col">
+        <label>착수일</label>
+        <input name="planting_date" class="form-control" placeholder="YYYY-MM-DD">
+      </div>
+      <div class="col">
+        <label>수확예정일</label>
+        <input name="harvest_date" class="form-control" placeholder="YYYY-MM-DD">
+      </div>
+    </div>
+
+    <!-- ⑨ 임차(예정) 농지 -->
+    <h5 class="mt-4">⑨ 임차(예정) 농지</h5>
+    <table class="table table-bordered">
+      <thead><tr><th>소재지</th><th>지번</th><th>지목</th><th>면적(㎡)</th><th>작물</th><th>임차여부</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><input name="lease_location" class="form-control"></td>
+          <td><input name="lease_lot" class="form-control"></td>
+          <td><input name="lease_category" class="form-control"></td>
+          <td><input name="lease_area" class="form-control"></td>
+          <td><input name="lease_crop" class="form-control"></td>
+          <td>
+            <select name="lease_status" class="form-select">
+              <option value="예">예</option>
+              <option value="아니오">아니오</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ⑩ 공유취득 농지 위치 설명 -->
+    <h5 class="mt-4">⑩ 공유취득 농지 위치</h5>
+    <textarea name="shared_location" class="form-control" rows="3" placeholder="예: ○○면 ○○리 ○○번지 남측 일대 지분 취득 예정 등"></textarea>
+
+    <button type="submit" class="btn btn-primary mt-4">계획서 생성</button>
+  </form>
+</body>
+</html>
