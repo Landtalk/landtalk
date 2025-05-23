@@ -61,7 +61,7 @@ def calculate_distance():
         if "documents" in result and result["documents"]:
             return float(result["documents"][0]["y"]), float(result["documents"][0]["x"])
         if "errorMessage" in result and result["errorMessage"] is not None:
-            print(f"[카카오API 에러] {str(result["errorMessage"])}")
+            print(f'[카카오API 에러] {str(result["errorMessage"])}')
         return None
     
     def calculate_distance_km(coord1, coord2):
