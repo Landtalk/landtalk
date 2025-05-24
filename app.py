@@ -46,50 +46,67 @@ def calculate_distance():
     data = request.get_json()
     addr1 = data.get("addr1")
     addr2 = data.get("addr2")
-    print(f"[거리계산] addr1: {addr1}, addr2: {addr2}")
-    
+    print(f"[거리계산] 요청 수신: addr1='{addr1}', addr2='{addr2}'")
+
     def get_coordinates(address):
+        print(f"[거리계산] 좌표 변환 요청 주소: '{address}'")
         url = f"https://dapi.kakao.com/v2/local/search/address.json?query={urllib.parse.quote(address)}"
         headers = {
             "Authorization": f"KakaoAK {KAKAO_API_KEY}",
             "User-Agent": "Mozilla/5.0",
             "KA": "python/1.0"
         }
-        response = requests.get(url, headers=headers)
-        result = response.json()
-        print("[카카오API 응답]", result)
-        if "documents" in result and result["documents"]:
-            return float(result["documents"][0]["y"]), float(result["documents"][0]["x"])
-        if "errorMessage" in result and result["errorMessage"] is not None:
-            print(f'[카카오API 에러] {str(result["errorMessage"])}')
-        return None
-    
+        try:
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            result = response.json()
+            print("[카카오API 응답 전문]", result)
+            if "documents" in result and result["documents"]:
+                coord = (float(result["documents"][0]["y"]), float(result["documents"][0]["x"]))
+                print(f"[거리계산] 좌표 변환 성공: {address} -> {coord}")
+                return coord
+            else:
+                error_message = result.get("errorMessage", "좌표를 찾을 수 없습니다.")
+                print(f"[카카오API 응답 오류] {address}: {error_message}")
+                return None
+        except requests.exceptions.RequestException as e:
+            print(f"[카카오API 요청 오류] {address}: {str(e)}")
+            return None
+        except Exception as e:
+            print(f"[카카오API 처리 중 오류] {address}: {str(e)}")
+            return None
+
     def calculate_distance_km(coord1, coord2):
-        # Haversine formula
         lat1, lon1 = coord1
         lat2, lon2 = coord2
-        
-        R = 6371  # Earth's radius in kilometers
-        
+
+        R = 6371
+
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         dlat = lat2 - lat1
         dlon = lon2 - lon1
-        
+
         a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
         c = 2 * math.asin(math.sqrt(a))
-        
-        return R * c
-    
+
+        distance = R * c
+        print(f"[거리계산] 좌표 거리 계산 완료: {coord1}, {coord2} -> {distance} km")
+        return distance
+
     coord1 = get_coordinates(addr1)
     coord2 = get_coordinates(addr2)
-    
+
     if not coord1:
+        print(f"[거리계산] 출발지 좌표 찾기 실패: {addr1}")
         return jsonify({"error": f"출발지 주소를 찾을 수 없습니다: {addr1}"}), 400
     if not coord2:
+        print(f"[거리계산] 도착지 좌표 찾기 실패: {addr2}")
         return jsonify({"error": f"도착지 주소를 찾을 수 없습니다: {addr2}"}), 400
-    
+
     distance = calculate_distance_km(coord1, coord2)
-    return jsonify({"distance": f"{distance:.1f}km"})
+    response_data = {"distance": f"{distance:.1f}km"}
+    print(f"[거리계산] 최종 응답: {response_data}")
+    return jsonify(response_data)
 
 def remove_light_bg(input_path, output_path, threshold=220):
     try:
@@ -242,6 +259,36 @@ def generate():
         data["today"] = datetime.now().strftime("%Y년 %m월 %d일")
         print("[정보] 기본 데이터 처리 완료")
         
+        def process_other_option(data, field_name_prefix, count):
+            for i in range(1, count + 1):
+                select_name = f"{field_name_prefix}{i}"
+                other_name = f"{field_name_prefix}{i}_other"
+                if select_name in data and data[select_name] == '기타':
+                    if other_name in data and data[other_name].strip():
+                        data[select_name] = data[other_name].strip()
+
+        process_other_option(data, 'member_relation', 3)
+        process_other_option(data, 'target_category', 3)
+        process_other_option(data, 'own_category', 3)
+
+        # 임차(예정) 농지 현황 처리
+        for i in range(1, 4):
+            # '기타' 처리 (임차 농지 지목)
+            lease_category_select_name = f"lease_category{i}"
+            lease_category_other_name = f"lease_category{i}_other"
+            if lease_category_select_name in data and data[lease_category_select_name] == '기타':
+                 if lease_category_other_name in data and data[lease_category_other_name].strip():
+                     data[lease_category_select_name] = data[lease_category_other_name].strip()
+
+            # '해당없음' 또는 빈 값 처리
+            if data.get(f'lease_category{i}', '') == '':
+                data[f'lease_category{i}'] = ''
+
+            if data.get(f'lease_status{i}', '') == '':
+                 data[f'lease_status{i}'] = ''
+
+            print(f"[임차농지 처리] lease_category{i}: '{data.get(f'lease_category{i}')}', lease_status{i}: '{data.get(f'lease_status{i}')}'")
+
         # 공유지분 처리
         for i in range(1, 4):
             area = data.get(f"target_share_area{i}", "").strip()

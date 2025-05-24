@@ -321,10 +321,27 @@
               <td><input class="form-control" name="lease_town{{i}}" placeholder="읍·면"></td>
               <td><input class="form-control" name="lease_village{{i}}" placeholder="리·동"></td>
               <td><input class="form-control" name="lease_lot{{i}}" placeholder="지번"></td>
-              <td><input class="form-control" name="lease_category{{i}}" placeholder="지목"></td>
+              <td>
+                <div class="input-group">
+                  <select name="lease_category{{i}}" class="form-select" onchange="toggleOtherInput(this, 'lease_category{{i}}_other')">
+                    <option value="">해당없음</option>
+                    <option value="전">전</option>
+                    <option value="답">답</option>
+                    <option value="과수원">과수원</option>
+                    <option value="기타">기타</option>
+                  </select>
+                  <input type="text" name="lease_category{{i}}_other" class="form-control other-input" placeholder="직접입력">
+                </div>
+              </td>
               <td><input class="form-control" name="lease_area{{i}}" placeholder="면적(㎡)"></td>
               <td><input class="form-control" name="lease_crop{{i}}" placeholder="주재배작물(측종명)"></td>
-              <td><input class="form-control" name="lease_status{{i}}" placeholder="임차(예정)여부"></td>
+              <td>
+                <select name="lease_status{{i}}" class="form-select">
+                  <option value="">해당없음</option>
+                  <option value="임차">임차</option>
+                  <option value="임차예정">임차예정</option>
+                </select>
+              </td>
             </tr>
           {% endfor %}
           </tbody>
