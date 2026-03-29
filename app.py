@@ -47,7 +47,7 @@ def calculate_distance():
     addr1 = data.get("addr1")
     addr2 = data.get("addr2")
     print(f"[거리계산] 요청 수신: addr1='{addr1}', addr2='{addr2}'")
-
+    
     def get_coordinates(address):
         print(f"[거리계산] 좌표 변환 요청 주소: '{address}'")
         url = f"https://dapi.kakao.com/v2/local/search/address.json?query={urllib.parse.quote(address)}"
@@ -75,38 +75,197 @@ def calculate_distance():
         except Exception as e:
             print(f"[카카오API 처리 중 오류] {address}: {str(e)}")
             return None
-
+    
     def calculate_distance_km(coord1, coord2):
+        # Haversine formula
         lat1, lon1 = coord1
         lat2, lon2 = coord2
-
-        R = 6371
-
+        
+        R = 6371  # Earth's radius in kilometers
+        
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         dlat = lat2 - lat1
         dlon = lon2 - lon1
-
+        
         a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
         c = 2 * math.asin(math.sqrt(a))
-
+        
         distance = R * c
         print(f"[거리계산] 좌표 거리 계산 완료: {coord1}, {coord2} -> {distance} km")
         return distance
-
+    
     coord1 = get_coordinates(addr1)
     coord2 = get_coordinates(addr2)
-
+    
     if not coord1:
         print(f"[거리계산] 출발지 좌표 찾기 실패: {addr1}")
         return jsonify({"error": f"출발지 주소를 찾을 수 없습니다: {addr1}"}), 400
     if not coord2:
         print(f"[거리계산] 도착지 좌표 찾기 실패: {addr2}")
         return jsonify({"error": f"도착지 주소를 찾을 수 없습니다: {addr2}"}), 400
-
+    
     distance = calculate_distance_km(coord1, coord2)
     response_data = {"distance": f"{distance:.1f}km"}
     print(f"[거리계산] 최종 응답: {response_data}")
     return jsonify(response_data)
+
+@app.route("/distance", methods=["POST"])
+def distance():
+    data = request.get_json() or {}
+    addr1 = (data.get("addr1") or "").strip()
+    addr2 = (data.get("addr2") or "").strip()
+
+    def get_coordinates(address):
+        url = f"https://dapi.kakao.com/v2/local/search/address.json?query={urllib.parse.quote(address)}"
+        headers = {
+            "Authorization": f"KakaoAK {KAKAO_API_KEY}",
+            "User-Agent": "Mozilla/5.0",
+            "KA": "python/1.0"
+        }
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            if "documents" in result and result["documents"]:
+                doc = result["documents"][0]
+                return (float(doc["y"]), float(doc["x"]))
+            return None
+        except Exception:
+            return None
+
+    def calculate_distance_km(coord1, coord2):
+        lat1, lon1 = coord1
+        lat2, lon2 = coord2
+
+        R = 6371
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        c = 2 * math.asin(math.sqrt(a))
+        return R * c
+
+    if not addr1 or not addr2:
+        return jsonify({
+            "success": False,
+            "error": "addr1과 addr2를 모두 입력해야 합니다."
+        }), 400
+
+    coord1 = get_coordinates(addr1)
+    coord2 = get_coordinates(addr2)
+
+    if not coord1:
+        return jsonify({
+            "success": False,
+            "error": f"출발지 주소를 찾을 수 없습니다: {addr1}"
+        }), 400
+
+    if not coord2:
+        return jsonify({
+            "success": False,
+            "error": f"도착지 주소를 찾을 수 없습니다: {addr2}"
+        }), 400
+
+    dist = calculate_distance_km(coord1, coord2)
+
+    return jsonify({
+        "success": True,
+        "distance_km": round(dist, 1),
+        "distance_text": f"{dist:.1f}km",
+        "method": "straight_line"
+    })
+
+
+@app.route("/distances", methods=["POST"])
+def distances():
+    data = request.get_json() or {}
+    target_address = (data.get("target_address") or "").strip()
+    owned_addresses = data.get("owned_addresses") or []
+
+    def get_coordinates(address):
+        url = f"https://dapi.kakao.com/v2/local/search/address.json?query={urllib.parse.quote(address)}"
+        headers = {
+            "Authorization": f"KakaoAK {KAKAO_API_KEY}",
+            "User-Agent": "Mozilla/5.0",
+            "KA": "python/1.0"
+        }
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            if "documents" in result and result["documents"]:
+                doc = result["documents"][0]
+                return (float(doc["y"]), float(doc["x"]))
+            return None
+        except Exception:
+            return None
+
+    def calculate_distance_km(coord1, coord2):
+        lat1, lon1 = coord1
+        lat2, lon2 = coord2
+
+        R = 6371
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        c = 2 * math.asin(math.sqrt(a))
+        return R * c
+
+    if not target_address:
+        return jsonify({
+            "success": False,
+            "error": "target_address를 입력해야 합니다."
+        }), 400
+
+    if not isinstance(owned_addresses, list):
+        return jsonify({
+            "success": False,
+            "error": "owned_addresses는 배열이어야 합니다."
+        }), 400
+
+    target_coord = get_coordinates(target_address)
+    if not target_coord:
+        return jsonify({
+            "success": False,
+            "error": f"대상 토지 주소를 찾을 수 없습니다: {target_address}"
+        }), 400
+
+    results = []
+
+    for addr in owned_addresses:
+        addr = (addr or "").strip()
+
+        if not addr:
+            results.append({
+                "address": addr,
+                "error": "주소 비어 있음"
+            })
+            continue
+
+        coord = get_coordinates(addr)
+        if not coord:
+            results.append({
+                "address": addr,
+                "error": "주소를 찾을 수 없습니다"
+            })
+            continue
+
+        dist = calculate_distance_km(target_coord, coord)
+        results.append({
+            "address": addr,
+            "distance_km": round(dist, 1),
+            "distance_text": f"{dist:.1f}km"
+        })
+
+    return jsonify({
+        "success": True,
+        "target_address": target_address,
+        "results": results,
+        "method": "straight_line"
+    })
 
 def remove_light_bg(input_path, output_path, threshold=220):
     try:
@@ -258,7 +417,8 @@ def generate():
         data = request.form.to_dict()
         data["today"] = datetime.now().strftime("%Y년 %m월 %d일")
         print("[정보] 기본 데이터 처리 완료")
-        
+
+        # '기타' 선택 시 상세 내용 반영
         def process_other_option(data, field_name_prefix, count):
             for i in range(1, count + 1):
                 select_name = f"{field_name_prefix}{i}"
@@ -267,8 +427,13 @@ def generate():
                     if other_name in data and data[other_name].strip():
                         data[select_name] = data[other_name].strip()
 
+        # 세대원 관계 처리 (3명)
         process_other_option(data, 'member_relation', 3)
+
+        # 취득 대상 농지 지목 처리 (3개)
         process_other_option(data, 'target_category', 3)
+
+        # 소유 농지 지목 처리 (3개)
         process_other_option(data, 'own_category', 3)
 
         # 임차(예정) 농지 현황 처리
@@ -279,14 +444,17 @@ def generate():
             if lease_category_select_name in data and data[lease_category_select_name] == '기타':
                  if lease_category_other_name in data and data[lease_category_other_name].strip():
                      data[lease_category_select_name] = data[lease_category_other_name].strip()
-
+            
             # '해당없음' 또는 빈 값 처리
             if data.get(f'lease_category{i}', '') == '':
                 data[f'lease_category{i}'] = ''
 
             if data.get(f'lease_status{i}', '') == '':
                  data[f'lease_status{i}'] = ''
-
+                 
+            # 나머지 필드 값 가져오기 (기존 로직 유지)
+            # 현재 코드에서는 data 딕셔너리를 직접 템플릿에 전달하므로, 추가적인 할당 로직은 필요 없음
+            # 다만, 빈 문자열로 처리되었는지 확인이 필요함
             print(f"[임차농지 처리] lease_category{i}: '{data.get(f'lease_category{i}')}', lease_status{i}: '{data.get(f'lease_status{i}')}'")
 
         # 공유지분 처리
