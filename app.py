@@ -267,6 +267,41 @@ def distances():
         "method": "straight_line"
     })
 
+from flask import Response
+
+@app.route("/privacy")
+def privacy():
+    return Response("""
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>개인정보처리방침</title>
+</head>
+<body>
+<h1>개인정보처리방침</h1>
+
+<p>본 서비스는 농취증 신청서 작성을 보조하기 위한 서비스입니다.</p>
+
+<h2>1. 수집 정보</h2>
+<p>주소, 토지정보 등 입력값을 처리할 수 있습니다.</p>
+
+<h2>2. 이용 목적</h2>
+<p>거리 계산 및 신청서 초안 생성</p>
+
+<h2>3. 보관</h2>
+<p>데이터는 저장하지 않으며 요청 처리 후 즉시 폐기됩니다.</p>
+
+<h2>4. 외부 서비스</h2>
+<p>주소 검색 및 거리 계산을 위해 외부 API를 사용할 수 있습니다.</p>
+
+<h2>5. 문의</h2>
+<p>서비스 관련 문의는 운영자에게 연락 바랍니다.</p>
+
+</body>
+</html>
+""", mimetype="text/html; charset=utf-8")
+
 def remove_light_bg(input_path, output_path, threshold=220):
     try:
         img = Image.open(input_path).convert("RGBA")
